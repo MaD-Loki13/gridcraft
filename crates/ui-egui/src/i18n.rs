@@ -11,6 +11,8 @@ use serde::{Deserialize, Serialize};
 
 mod cs;
 mod de;
+mod de_extra;
+mod de_msg;
 mod es;
 mod fr;
 mod ko;
@@ -171,6 +173,28 @@ pub fn current(ctx: &egui::Context) -> Language {
 /// Sets the language for the current frame; call once per frame before anything is drawn.
 pub fn set_current(ctx: &egui::Context, language: Language) {
     ctx.data_mut(|d| d.insert_temp(lang_key(), language));
+    CURRENT.with(|c| c.set(language));
+}
+
+thread_local! {
+    /// DoeringCraft: the language of the frame being drawn, for [`t`]; [`set_current`] writes it.
+    static CURRENT: std::cell::Cell<Language> = const { std::cell::Cell::new(Language::En) };
+}
+
+/// DoeringCraft: translates a label drawn straight into a widget (dialogs, panes, menus) for the
+/// language of the frame being drawn; untranslated labels stay English.
+pub fn t(text: &str) -> &str {
+    CURRENT.with(std::cell::Cell::get).tr(text)
+}
+
+/// DoeringCraft: translates a message (alert, toast, error) for the language of the frame being
+/// drawn. Exact labels first, then the message templates with `{}` placeholders (see `de_msg.rs`);
+/// a formula error keeps its parser detail translated too.
+pub fn message(text: &str) -> String {
+    match CURRENT.with(std::cell::Cell::get) {
+        Language::De => de_msg::translate(text),
+        lang => lang.tr(text).to_string(),
+    }
 }
 
 /// English label → Japanese. Keys are the exact interface strings (command ids, file names and

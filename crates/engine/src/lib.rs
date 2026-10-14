@@ -300,13 +300,20 @@ impl Session {
     }
     /// A new blank workbook titled `BookN`.
     pub fn new_workbook(&mut self) -> usize {
-        let n = (1..).find(|n| !self.docs.iter().any(|d| d.title == format!("Book{n}") && d.path.is_none())).unwrap_or(1);
+        // DoeringCraft: the web build titles new workbooks and their first sheet in German (`Mappe1`, `Tabelle1`).
+        const BOOK: &str = if cfg!(target_arch = "wasm32") { "Mappe" } else { "Book" };
+        let n = (1..).find(|n| !self.docs.iter().any(|d| d.title == format!("{BOOK}{n}") && d.path.is_none())).unwrap_or(1);
         let mut wb = Workbook::new();
+        if cfg!(target_arch = "wasm32")
+            && let Some(first) = wb.sheets.first_mut()
+        {
+            Arc::make_mut(first).name = format!("{}1", gridcraft_model::workbook::SHEET_PREFIX);
+        }
         for _ in 1..self.prefs.sheets_in_new_workbook.clamp(1, 255) {
             let name = wb.next_sheet_name();
             wb.sheets.push(Arc::new(gridcraft_model::Sheet::new(name)));
         }
-        self.add_document(DocState::new(wb, None, format!("Book{n}")))
+        self.add_document(DocState::new(wb, None, format!("{BOOK}{n}")))
     }
 
     pub fn commands(&self) -> Vec<CommandInfo> {

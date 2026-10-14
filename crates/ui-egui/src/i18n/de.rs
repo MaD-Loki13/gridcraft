@@ -411,6 +411,7 @@ pub(super) fn translate(text: &str) -> Option<&'static str> {
         "Dark" => "Dunkel",
         "Sheet Options|View" => "Anzeige",
         "Print" => "Drucken",
-        _ => return None,
+        // DoeringCraft: labels the upstream table lacks.
+        _ => return super::de_extra::translate(text),
     })
 }

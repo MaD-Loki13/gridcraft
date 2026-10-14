@@ -128,6 +128,9 @@ impl Default for Workbook {
     }
 }
 
+/// DoeringCraft: the web build names new sheets as German spreadsheets do (`Tabelle1`, `Tabelle2` …).
+pub const SHEET_PREFIX: &str = if cfg!(target_arch = "wasm32") { "Tabelle" } else { "Sheet" };
+
 impl Workbook {
     /// A new workbook with one sheet, "Sheet1".
     pub fn new() -> Workbook {
@@ -164,7 +167,7 @@ impl Workbook {
     }
     /// A fresh sheet name `SheetN` not in use.
     pub fn next_sheet_name(&self) -> String {
-        (1..).map(|n| format!("Sheet{n}")).find(|n| self.sheet_index(n).is_none()).unwrap_or_else(|| "Sheet".into())
+        (1..).map(|n| format!("{SHEET_PREFIX}{n}")).find(|n| self.sheet_index(n).is_none()).unwrap_or_else(|| SHEET_PREFIX.into())
     }
     /// Validates a sheet name like Excel: 1–31 chars, none of `: \ / ? * [ ]`, not starting or
     /// ending with `'`, unique (case-insensitive) unless it is `except`'s own name.
