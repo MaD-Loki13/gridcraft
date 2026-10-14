@@ -49,6 +49,18 @@ pub fn start() {
                     }
                     let mut app = SheetApp::new(session, services);
                     app.ui.system_theme = true;
+                    // DoeringCraft: `?theme=hell|dunkel` (or light|dark) pins the theme to the host page's.
+                    match query_param("theme").as_deref() {
+                        Some("dunkel" | "dark") => {
+                            app.ui.system_theme = false;
+                            app.ui.dark = true;
+                        }
+                        Some("hell" | "light") => {
+                            app.ui.system_theme = false;
+                            app.ui.dark = false;
+                        }
+                        _ => {}
+                    }
                     // Follow the browser's language, except a CJK one: the web build has no system
                     // CJK fonts (none are bundled), so that interface would render as tofu.
                     let browser = gridcraft_ui_egui::i18n::Language::system();
