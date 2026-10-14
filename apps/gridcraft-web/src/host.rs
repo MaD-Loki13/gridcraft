@@ -86,6 +86,10 @@ impl Bridge {
     pub fn sync(&self, app: &mut SheetApp) {
         // DoeringCraft: the page's own Save button saves the workbook (the bytes come back through `download`).
         if self.save_requested.replace(false) {
+            // DoeringCraft: a cell still being typed in is taken over first, as Enter would.
+            if app.editor.is_some() {
+                let _ = app.commit_edit(0, 0, false, false);
+            }
             if let Err(e) = app.run("file.save", serde_json::json!({})) {
                 log::error!("save requested by the page failed: {e}");
             }
@@ -99,7 +103,8 @@ impl Bridge {
                 doc.title = name.clone();
             }
         }
-        let dirty = app.session.documents().iter().any(|d| d.is_dirty());
+        // DoeringCraft: a cell still being typed in counts as unsaved, so closing the window asks first.
+        let dirty = app.session.documents().iter().any(|d| d.is_dirty()) || app.editor.is_some();
         if self.reported.get() != Some(dirty) && self.send(&[("type", "gridcraft:dirty".into()), ("dirty", dirty.into())]) {
             self.reported.set(Some(dirty));
         }
