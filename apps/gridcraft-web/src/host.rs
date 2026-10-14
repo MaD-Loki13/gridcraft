@@ -37,6 +37,8 @@ pub struct Bridge {
     saved: Rc<RefCell<Vec<String>>>,
     /// The unsaved-changes state last reported to the parent.
     reported: Rc<Cell<Option<bool>>>,
+    /// DoeringCraft: the parent asked to save (`gridcraft:save-request`); handled in `sync`.
+    save_requested: Rc<Cell<bool>>,
 }
 
 impl Bridge {
@@ -48,7 +50,7 @@ impl Bridge {
             return None;
         }
         let origin = window.location().origin().ok()?;
-        Some(Self { window, parent, origin, saved: Rc::default(), reported: Rc::default() })
+        Some(Self { window, parent, origin, saved: Rc::default(), reported: Rc::default(), save_requested: Rc::default() })
     }
 
     /// Send saved and exported files to the parent instead of downloading them, and hear files
@@ -82,6 +84,12 @@ impl Bridge {
     /// After each frame: a workbook handed to the parent this frame counts as saved under the
     /// name it was saved as, and the parent hears when unsaved changes appear or go away.
     pub fn sync(&self, app: &mut SheetApp) {
+        // DoeringCraft: the page's own Save button saves the workbook (the bytes come back through `download`).
+        if self.save_requested.replace(false) {
+            if let Err(e) = app.run("file.save", serde_json::json!({})) {
+                log::error!("save requested by the page failed: {e}");
+            }
+        }
         let saved = std::mem::take(&mut *self.saved.borrow_mut());
         if let Some(name) = saved.iter().rev().find(|name| is_workbook(name))
             && let Some(doc) = app.session.active_mut()
@@ -112,12 +120,19 @@ impl Bridge {
     fn listen(&self, inbox: Inbox, ctx: egui::Context) {
         let parent = self.parent.clone();
         let origin = self.origin.clone();
+        let save_requested = self.save_requested.clone();
         let on_message = Closure::<dyn FnMut(web_sys::MessageEvent)>::new(move |event: web_sys::MessageEvent| {
             if event.origin() != origin || !event.source().is_some_and(|s| js_sys::Object::is(&s, &parent)) {
                 return;
             }
             let data = event.data();
-            if string(&data, "type").as_deref() != Some("gridcraft:open") {
+            let kind = string(&data, "type");
+            if kind.as_deref() == Some("gridcraft:save-request") {
+                save_requested.set(true);
+                ctx.request_repaint();
+                return;
+            }
+            if kind.as_deref() != Some("gridcraft:open") {
                 return;
             }
             let name = string(&data, "name").filter(|n| !n.trim().is_empty()).unwrap_or_else(|| "Book.xlsx".to_string());
