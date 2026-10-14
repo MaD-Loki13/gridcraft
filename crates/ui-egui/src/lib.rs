@@ -76,6 +76,13 @@ pub struct UiState {
     /// [`INTERFACE_SCALE_MIN`]..=[`INTERFACE_SCALE_MAX`]; a malformed saved value reads as 100.
     #[serde(deserialize_with = "lenient_interface_scale")]
     pub interface_scale: u16,
+    /// DoeringCraft: framed by the Doering Dashboard (`?host=parent`). The page around it saves and hands out the
+    /// file, so Share and the Automate tab are left out; not saved.
+    #[serde(skip)]
+    pub embedded: bool,
+    /// DoeringCraft: the name the host page gives a new workbook (`?name=`), shown instead of `Mappe1`; not saved.
+    #[serde(skip)]
+    pub untitled_name: Option<String>,
 }
 
 pub const INTERFACE_SCALE_MIN: u16 = 75;
@@ -107,6 +114,8 @@ impl Default for UiState {
             keytip_invoke: None,
             language: i18n::Language::En,
             interface_scale: 100,
+            embedded: false,
+            untitled_name: None,
         }
     }
 }
@@ -1081,6 +1090,12 @@ impl SheetApp {
         }
         if self.session.active().is_none() {
             self.session.new_workbook();
+            // DoeringCraft: embedded, the new workbook carries the Dashboard's name instead of `Mappe1`.
+            if let Some(name) = self.ui.untitled_name.clone()
+                && let Some(d) = self.session.active_mut()
+            {
+                d.title = name;
+            }
         }
     }
 

@@ -68,6 +68,12 @@ pub fn start() {
                         if let Some(author) = query_param("author") {
                             crate::host::Bridge::set_author(&mut app, &author);
                         }
+                        // DoeringCraft: embedded, without the parts the Dashboard covers; `?name=` names a new workbook.
+                        app.ui.embedded = true;
+                        if let Some(name) = query_param("name").filter(|n| !n.trim().is_empty()) {
+                            let stem = std::path::Path::new(&name).file_stem().map(|s| s.to_string_lossy().into_owned()).unwrap_or(name);
+                            app.ui.untitled_name = Some(stem);
+                        }
                         bridge.post_ready();
                     }
                     Ok(Box::new(WebShell { app, inbox, bridge: app_bridge }))
