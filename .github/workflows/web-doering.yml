@@ -1,0 +1,46 @@
+# DoeringCraft: nur das Web-Paket (WebAssembly) bauen, für das Doering Dashboard.
+# Ausgabe: Artefakt "gridcraft-web" mit dist/release/gridcraft-web-<version>.zip (wie packaging/web/package.sh).
+name: Web-Paket (DoeringCraft)
+
+on:
+  push:
+    branches: [doering]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: web-doering-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  web:
+    name: Web (wasm)
+    runs-on: ubuntu-latest
+    env:
+      CARGO_TERM_COLOR: always
+      CARGO_INCREMENTAL: 0
+      RUST_BACKTRACE: 1
+      GRIDCRAFT_BUILD_SHA: ${{ github.sha }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: web-doering
+      - name: trunk installieren
+        run: |
+          curl -sSL https://github.com/trunk-rs/trunk/releases/download/v0.21.14/trunk-x86_64-unknown-linux-gnu.tar.gz | tar -xz -C /usr/local/bin trunk
+          trunk --version
+      - name: Bauen und packen
+        run: packaging/web/package.sh
+      - name: Prüfsummen
+        run: cd dist/release && sha256sum *.zip | tee SHA256SUMS.txt
+      - uses: actions/upload-artifact@v4
+        with:
+          name: gridcraft-web
+          path: dist/release/*
+          if-no-files-found: error
