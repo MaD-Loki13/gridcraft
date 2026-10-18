@@ -21,6 +21,7 @@ const TEMPLATES: &[(&str, &str)] = &[
     ("unexpected `{}`", "unerwartet: `{}`"),
     ("unexpected {}", "unerwartet: {}"),
     ("formula is nested too deeply", "die Formel ist zu tief verschachtelt"),
+    ("formula is longer than {} characters", "die Formel ist länger als {} Zeichen"),
     ("too many arguments", "zu viele Argumente"),
     ("invalid 3-D reference", "ungültiger 3D-Bezug"),
     ("array rows must have the same length", "alle Zeilen einer Matrix müssen gleich lang sein"),
